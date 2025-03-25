@@ -1,56 +1,71 @@
-function displayCharacterDetails(id) {
-  fetch(`http://localhost:3000/characters/${id}`)
-      .then(response => response.json())
-      .then(character => {
-          detailedInfo.innerHTML = `
-              <h2>${character.name}</h2>
-              <img src="${character.image}" alt="${character.name}" data-id="${character.id}" />
-              <p>Votes: <span id="vote-count-${character.id}">${character.votes}</span></p>
-              <form id="votes-form-${character.id}">
-                  <input type="number" name="votes" min="1" required />
-                  <button type="submit">Vote</button>
-              </form>
-              <button id="reset-votes-${character.id}">Reset Votes</button>
-          `;
+function displayAnimals() {
+    const animalsContainer = document.getElementById("animals-container");
 
-          // Add event listener for voting
-          document.getElementById(`votes-form-${character.id}`).addEventListener("submit", (event) => {
-              event.preventDefault();
-              const voteInput = parseInt(event.target.elements.votes.value);
+    fetch("http://localhost:3000/characters")
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Failed to fetch animals");
+            }
+            return response.json();
+        })
+        .then(animals => {
+            animalsContainer.innerHTML = ""; // Clear previous content
 
-              if (isNaN(voteInput) || voteInput < 1) {
-                  alert("Please enter a valid positive number.");
-                  return;
-              }
-              
-              const voteCount = document.getElementById(`vote-count-${character.id}`);
-              const newVotes = parseInt(voteCount.textContent) + voteInput;
-              voteCount.textContent = newVotes;
+            animals.forEach(animal => {
+                const animalCard = document.createElement("div");
+                animalCard.classList.add("animal-card");
 
-              // Update votes on the server
-              fetch(`http://localhost:3000/characters/${character.id}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ votes: newVotes })
-              });
-          });
+                animalCard.innerHTML = `
+                    <h2>${animal.name}</h2>
+                    <img src="${animal.image}" alt="${animal.name}" />
+                    <p>Votes: <span id="vote-count-${animal.id}">${animal.votes}</span></p>
+                    <form class="votes-form" data-id="${animal.id}">
+                        <input type="number" name="votes" min="1" required />
+                        <button type="submit">Vote</button>
+                    </form>
+                    <button class="reset-votes" data-id="${animal.id}">Reset Votes</button>
+                `;
 
-          // Add event listener for resetting votes
-          document.getElementById(`reset-votes-${character.id}`).addEventListener("click", () => {
-              const voteCount = document.getElementById(`vote-count-${character.id}`);
-              voteCount.textContent = 0;
+                animalsContainer.appendChild(animalCard);
+            });
 
-              fetch(`http://localhost:3000/characters/${character.id}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ votes: 0 })
-              });
-          });
-      })
-      .catch(error => {
-          console.error(error);
-          detailedInfo.innerHTML = "<p>Error loading character details.</p>";
-      });
-}
+            // Attach event listeners for voting
+            document.querySelectorAll(".votes-form").forEach(form => {
+                form.addEventListener("submit", (event) => {
+                    event.preventDefault();
+                    const animalId = event.target.getAttribute("data-id");
+                    const voteInput = Math.abs(parseInt(event.target.elements.votes.value, 10));
 
+                    if (isNaN(voteInput) || voteInput < 1) {
+                        alert("Please enter a valid positive number.");
+                        return;
+                    }
 
+                    const voteCountElement = document.getElementById(`vote-count-${animalId}`);
+                    const newVotes = parseInt(voteCountElement.textContent, 10) + voteInput;
+                    voteCountElement.textContent = newVotes;
+
+                    // Reset input field
+                    event.target.reset();
+
+                    // Update votes on the server
+                    fetch(`http://localhost:3000/characters/${animalId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ votes: newVotes })
+                    })
+                    .catch(error => console.error("Error updating votes:", error));
+                });
+            });
+
+            // Attach event listeners for resetting votes
+            document.querySelectorAll(".reset-votes").forEach(button => {
+                button.addEventListener("click", () => {
+                    const animalId = button.getAttribute("data-id");
+                    const voteCountElement = document.getElementById(`vote-count-${animalId}`);
+                    voteCountElement.textContent = 0;
+
+                    fetch(`http://localhost:3000/characters/${animalId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ votes:
